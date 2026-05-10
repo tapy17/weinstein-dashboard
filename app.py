@@ -88,3 +88,13 @@ st.dataframe(df[df["Stage"] == "Stage 1 Base"])
 
 st.subheader("🔴 Weak Stocks")
 st.dataframe(df[df["Stage"] == "Stage 3/4 Downtrend"])
+st.subheader("🏆 Top Stage 2 Leaders (Best Momentum)")
+st.dataframe(
+    df[df["Stage"] == "Stage 2 Trend"]
+    .sort_values("RS Proxy", ascending=False)
+    .head(10)
+)
+st.subheader("🚀 Breakout Watchlist (Near 52W High)")
+st.dataframe(df[df["Stage"] == "Stage 2 Breakout"])
+st.subheader("📈 Strongest Relative Strength Stocks")
+st.dataframe(df.sort_values("RS Proxy", ascending=False).head(15))
