@@ -6,10 +6,9 @@ st.set_page_config(page_title="Weinstein Dashboard", layout="wide")
 
 st.title("📊 Weinstein Stage Dashboard (Stable Version)")
 
-stocks = [
-    "RELIANCE.NS", "TCS.NS", "INFY.NS",
-    "HDFCBANK.NS", "ICICIBANK.NS",
-    "SBIN.NS", "LT.NS"
+import pandas as pd
+
+stocks = pd.read_csv("nse_750.csv", header=None)[0].tolist()
 ]
 
 data = []
