@@ -4,23 +4,23 @@ import yfinance as yf
 
 st.set_page_config(page_title="Weinstein Pro Scanner", layout="wide")
 
-st.title("📊 Weinstein Pro Stock Scanner (NSE 750 Ready)")
+st.title("📊 Weinstein Pro NSE Scanner (750 Stocks Ready)")
 
 # -----------------------------
-# LOAD NSE UNIVERSE
+# LOAD UNIVERSE
 # -----------------------------
 try:
     stocks = pd.read_csv("nse_750.csv", header=None)[0].dropna().tolist()
 except:
-    st.error("nse_750.csv not found in repo root")
+    st.error("❌ nse_750.csv missing in repo root")
     stocks = []
 
-st.write(f"Stocks loaded: {len(stocks)}")
+st.write(f"Stocks Loaded: {len(stocks)}")
 
 data = []
 
 # -----------------------------
-# SCAN STOCKS (BATCH SAFE)
+# SAFE BATCH SCANNING
 # -----------------------------
 BATCH_SIZE = 25
 
@@ -47,7 +47,7 @@ for i in range(0, len(stocks), BATCH_SIZE):
             rs = close / hist["Close"].iloc[0]
 
             # -----------------------------
-            # WEINSTEIN STAGE LOGIC
+            # WEINSTEIN STAGE CLASSIFICATION
             # -----------------------------
             if close > ma150 and rs > 1.2 and volume > avg_vol:
                 stage = "Stage 2 Trend"
@@ -64,7 +64,7 @@ for i in range(0, len(stocks), BATCH_SIZE):
             continue
 
 # -----------------------------
-# CREATE DATAFRAME
+# DATAFRAME
 # -----------------------------
 df = pd.DataFrame(data, columns=[
     "Stock", "Close", "MA150", "52W High",
@@ -72,13 +72,16 @@ df = pd.DataFrame(data, columns=[
 ])
 
 # -----------------------------
-# ADD SCORE (PRO UPGRADE)
+# SCORE SYSTEM (PRO MOMENTUM RANKING)
 # -----------------------------
-df["Score"] = (
-    df["RS Proxy"] * 0.5 +
-    (df["Volume"] / df["Volume"].mean()) * 0.3 +
-    (df["Close"] / df["MA150"]) * 0.2
-)
+if not df.empty:
+    df["Score"] = (
+        df["RS Proxy"] * 0.5 +
+        (df["Volume"] / df["Volume"].mean()) * 0.3 +
+        (df["Close"] / df["MA150"]) * 0.2
+    )
+else:
+    df["Score"] = 0
 
 # -----------------------------
 # DASHBOARD SECTIONS
@@ -86,14 +89,20 @@ df["Score"] = (
 st.subheader("📌 Full Market Scan")
 st.dataframe(df, use_container_width=True)
 
-st.subheader("🔥 Top 10 Buy Candidates (Stage 2 Leaders)")
-top = df[df["Stage"] == "Stage 2 Trend"].sort_values("Score", ascending=False).head(10)
-st.dataframe(top)
+st.subheader("🔥 Top 10 Momentum Leaders (BUY WATCHLIST)")
+st.dataframe(
+    df[df["Stage"] == "Stage 2 Trend"]
+    .sort_values(["Score", "RS Proxy"], ascending=False)
+    .head(10)
+)
 
-st.subheader("🚀 Breakout Watchlist")
-st.dataframe(df[df["Stage"] == "Stage 2 Breakout"])
+st.subheader("🚀 Breakout Candidates")
+st.dataframe(
+    df[df["Stage"] == "Stage 2 Breakout"]
+    .sort_values("RS Proxy", ascending=False)
+)
 
-st.subheader("🟡 Stage 1 Base Stocks")
+st.subheader("🟡 Stage 1 Base Stocks (Accumulation Zone)")
 st.dataframe(df[df["Stage"] == "Stage 1 Base"])
 
 st.subheader("⚠️ Weak / Avoid Stocks")
