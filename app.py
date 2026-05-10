@@ -2,25 +2,25 @@ import streamlit as st
 import pandas as pd
 import yfinance as yf
 
-st.set_page_config(page_title="Weinstein Stage Dashboard", layout="wide")
+st.set_page_config(page_title="Weinstein Pro Scanner", layout="wide")
 
-st.title("📊 Weinstein Stage Stock Scanner (NSE 750 Ready)")
+st.title("📊 Weinstein Pro Stock Scanner (NSE 750 Ready)")
 
 # -----------------------------
-# LOAD UNIVERSE (FROM CSV)
+# LOAD NSE UNIVERSE
 # -----------------------------
 try:
     stocks = pd.read_csv("nse_750.csv", header=None)[0].dropna().tolist()
 except:
-    st.error("nse_750.csv not found. Please upload it in GitHub repo root.")
+    st.error("nse_750.csv not found in repo root")
     stocks = []
 
-st.write(f"Total stocks loaded: {len(stocks)}")
+st.write(f"Stocks loaded: {len(stocks)}")
 
 data = []
 
 # -----------------------------
-# SAFETY BATCHING
+# SCAN STOCKS (BATCH SAFE)
 # -----------------------------
 BATCH_SIZE = 25
 
@@ -64,51 +64,37 @@ for i in range(0, len(stocks), BATCH_SIZE):
             continue
 
 # -----------------------------
-# DATAFRAME
+# CREATE DATAFRAME
 # -----------------------------
 df = pd.DataFrame(data, columns=[
     "Stock", "Close", "MA150", "52W High",
     "Volume", "RS Proxy", "Stage"
 ])
 
-st.subheader("📌 Full Scan Results")
+# -----------------------------
+# ADD SCORE (PRO UPGRADE)
+# -----------------------------
+df["Score"] = (
+    df["RS Proxy"] * 0.5 +
+    (df["Volume"] / df["Volume"].mean()) * 0.3 +
+    (df["Close"] / df["MA150"]) * 0.2
+)
+
+# -----------------------------
+# DASHBOARD SECTIONS
+# -----------------------------
+st.subheader("📌 Full Market Scan")
 st.dataframe(df, use_container_width=True)
 
-# -----------------------------
-# FILTERED SCREENS
-# -----------------------------
-st.subheader("🟢 Stage 2 Breakouts")
+st.subheader("🔥 Top 10 Buy Candidates (Stage 2 Leaders)")
+top = df[df["Stage"] == "Stage 2 Trend"].sort_values("Score", ascending=False).head(10)
+st.dataframe(top)
+
+st.subheader("🚀 Breakout Watchlist")
 st.dataframe(df[df["Stage"] == "Stage 2 Breakout"])
 
-st.subheader("🟡 Stage 2 Trends")
-st.dataframe(df[df["Stage"] == "Stage 2 Trend"])
-
-st.subheader("🟠 Stage 1 Bases")
+st.subheader("🟡 Stage 1 Base Stocks")
 st.dataframe(df[df["Stage"] == "Stage 1 Base"])
 
-st.subheader("🔴 Weak Stocks")
-st.dataframe(df[df["Stage"] == "Stage 3/4 Downtrend"])
-st.subheader("🏆 Top Stage 2 Leaders (Best Momentum)")
-st.dataframe(
-    df[df["Stage"] == "Stage 2 Trend"]
-    .sort_values("RS Proxy", ascending=False)
-    .head(10)
-)
-st.subheader("🚀 Breakout Watchlist (Near 52W High)")
-st.dataframe(df[df["Stage"] == "Stage 2 Breakout"])
-st.subheader("📈 Strongest Relative Strength Stocks")
-st.dataframe(df.sort_values("RS Proxy", ascending=False).head(15))
-st.subheader("🔥 Top 10 Trade Candidates (Stage 2 Leaders)")
-
-top = df[df["Stage"] == "Stage 2 Trend"].sort_values(
-    "RS Proxy", ascending=False
-).head(10)
-
-st.dataframe(top)
-st.subheader("🚀 High Probability Breakouts")
-
-st.dataframe(df[df["Stage"] == "Stage 2 Breakout"])
 st.subheader("⚠️ Weak / Avoid Stocks")
-
 st.dataframe(df[df["Stage"] == "Stage 3/4 Downtrend"])
-
