@@ -11,7 +11,7 @@ st.title("📊 Weinstein Level 4 (Auto Signal Engine)")
 # LOAD 750 STOCKS
 # -----------------------------
 try:
-    stocks = pd.read_csv("nse_750.csv", header=None)[0].dropna().tolist()
+    stocks = pd.read_csv("nse_200.csv", header=None)[0].dropna().tolist()
 except:
     st.error("❌ nse_750.csv missing")
     stocks = []
