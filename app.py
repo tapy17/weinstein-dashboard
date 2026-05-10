@@ -1,15 +1,14 @@
 import streamlit as st
 import pandas as pd
 import yfinance as yf
-import numpy as np
-import time
+import requests
 
-st.set_page_config(page_title="Weinstein Level 3 System", layout="wide")
+st.set_page_config(page_title="Weinstein Level 4 System", layout="wide")
 
-st.title("📊 Weinstein Level 3 (750 Stock Trading Engine)")
+st.title("📊 Weinstein Level 4 (Auto Signal Engine)")
 
 # -----------------------------
-# LOAD UNIVERSE (750 STOCKS)
+# LOAD 750 STOCKS
 # -----------------------------
 try:
     stocks = pd.read_csv("nse_750.csv", header=None)[0].dropna().tolist()
@@ -22,12 +21,19 @@ st.write(f"Stocks Loaded: {len(stocks)}")
 data = []
 
 # -----------------------------
-# OPTIONAL AUTO REFRESH
+# TELEGRAM SETUP (OPTIONAL)
 # -----------------------------
-auto_refresh = st.sidebar.checkbox("Auto Refresh (slow)", value=False)
+TELEGRAM_ENABLED = False
+BOT_TOKEN = "YOUR_BOT_TOKEN"
+CHAT_ID = "YOUR_CHAT_ID"
+
+def send_telegram(msg):
+    if TELEGRAM_ENABLED:
+        url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
+        requests.post(url, data={"chat_id": CHAT_ID, "text": msg})
 
 # -----------------------------
-# NIFTY INDEX (benchmark)
+# NIFTY REFERENCE
 # -----------------------------
 nifty = yf.Ticker("^NSEI")
 nifty_hist = nifty.history(period="1y")
@@ -40,7 +46,7 @@ else:
     nifty_now = 1
 
 # -----------------------------
-# SCANNER ENGINE (BATCHED)
+# FAST SCAN ENGINE
 # -----------------------------
 BATCH_SIZE = 20
 
@@ -63,15 +69,14 @@ for i in range(0, len(stocks), BATCH_SIZE):
             avg_vol = hist["Volume"].rolling(20).mean().iloc[-1]
 
             # -----------------------------
-            # REAL RELATIVE STRENGTH
+            # REAL RS
             # -----------------------------
             stock_ret = close / hist["Close"].iloc[0]
             nifty_ret = nifty_now / nifty_base
-
             rs = stock_ret / nifty_ret
 
             # -----------------------------
-            # WEINSTEIN STAGE
+            # STAGE LOGIC
             # -----------------------------
             if close > ma150 and rs > 1.1 and volume > avg_vol:
                 stage = "Stage 2 Trend"
@@ -83,38 +88,27 @@ for i in range(0, len(stocks), BATCH_SIZE):
                 stage = "Stage 1 Base"
 
             # -----------------------------
-            # LEVEL 3 BUY SIGNAL ENGINE
+            # SIGNAL ENGINE
             # -----------------------------
-            buy_signal = 0
-
+            score = 0
             if stage == "Stage 2 Trend":
-                buy_signal += 2
+                score += 2
             if rs > 1.2:
-                buy_signal += 1
+                score += 1
             if volume > avg_vol:
-                buy_signal += 1
+                score += 1
             if close > ma150:
-                buy_signal += 1
+                score += 1
 
-            if buy_signal >= 4:
+            if score >= 4:
                 signal = "🔥 BUY NOW"
-            elif buy_signal == 3:
+                send_telegram(f"BUY SIGNAL: {sym} Score:{score} RS:{rs:.2f}")
+            elif score == 3:
                 signal = "🟡 WATCH"
             else:
                 signal = "—"
 
-            # -----------------------------
-            # SECTOR MAP
-            # -----------------------------
-            sector = "Other"
-            if "BANK" in sym:
-                sector = "Banking"
-            elif "IT" in sym:
-                sector = "IT"
-            elif "RELIANCE" in sym:
-                sector = "Energy"
-
-            data.append([sym, close, rs, stage, buy_signal, signal, sector])
+            data.append([sym, close, rs, stage, score, signal])
 
         except:
             continue
@@ -124,30 +118,21 @@ for i in range(0, len(stocks), BATCH_SIZE):
 # -----------------------------
 df = pd.DataFrame(data, columns=[
     "Stock", "Close", "RS vs Nifty",
-    "Stage", "Score", "Signal", "Sector"
+    "Stage", "Score", "Signal"
 ])
 
 # -----------------------------
-# SECTOR STRENGTH
-# -----------------------------
-sector_rank = df.groupby("Sector")["RS vs Nifty"].mean().reset_index()
-sector_rank = sector_rank.sort_values("RS vs Nifty", ascending=False)
-
-# -----------------------------
-# LEVEL 3 OUTPUTS
+# OUTPUTS
 # -----------------------------
 
-st.subheader("🔥 TOP BUY SIGNALS (ONLY ACTIONABLE)")
+st.subheader("🔥 DAILY ACTION LIST (ONLY BUY NOW)")
 st.dataframe(df[df["Signal"] == "🔥 BUY NOW"].sort_values("Score", ascending=False).head(10))
 
-st.subheader("🚀 STAGE 2 BREAKOUTS")
+st.subheader("🚀 BREAKOUT WATCHLIST")
 st.dataframe(df[df["Stage"] == "Stage 2 Breakout"])
 
-st.subheader("📈 RELATIVE STRENGTH LEADERS")
+st.subheader("📈 STRONG MOMENTUM LEADERS")
 st.dataframe(df.sort_values("RS vs Nifty", ascending=False).head(10))
-
-st.subheader("📊 SECTOR STRENGTH (MONEY FLOW)")
-st.dataframe(sector_rank)
 
 st.subheader("⚠️ AVOID ZONE")
 st.dataframe(df[df["Stage"] == "Stage 3/4 Downtrend"])
