@@ -98,3 +98,17 @@ st.subheader("🚀 Breakout Watchlist (Near 52W High)")
 st.dataframe(df[df["Stage"] == "Stage 2 Breakout"])
 st.subheader("📈 Strongest Relative Strength Stocks")
 st.dataframe(df.sort_values("RS Proxy", ascending=False).head(15))
+st.subheader("🔥 Top 10 Trade Candidates (Stage 2 Leaders)")
+
+top = df[df["Stage"] == "Stage 2 Trend"].sort_values(
+    "RS Proxy", ascending=False
+).head(10)
+
+st.dataframe(top)
+st.subheader("🚀 High Probability Breakouts")
+
+st.dataframe(df[df["Stage"] == "Stage 2 Breakout"])
+st.subheader("⚠️ Weak / Avoid Stocks")
+
+st.dataframe(df[df["Stage"] == "Stage 3/4 Downtrend"])
+
