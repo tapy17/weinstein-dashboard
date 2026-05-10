@@ -2,62 +2,88 @@ import streamlit as st
 import pandas as pd
 import yfinance as yf
 
-st.set_page_config(page_title="Weinstein Dashboard", layout="wide")
+st.set_page_config(page_title="Weinstein Stage Dashboard", layout="wide")
 
-st.title("📊 Weinstein Stage Dashboard (Stable Version)")
+st.title("📊 Weinstein Stage Stock Scanner (NSE 750 Ready)")
 
-import pandas as pd
-[
-stocks = pd.read_csv("nse_750.csv", header=None)[0].tolist()
-]
+# -----------------------------
+# LOAD UNIVERSE (FROM CSV)
+# -----------------------------
+try:
+    stocks = pd.read_csv("nse_750.csv", header=None)[0].dropna().tolist()
+except:
+    st.error("nse_750.csv not found. Please upload it in GitHub repo root.")
+    stocks = []
+
+st.write(f"Total stocks loaded: {len(stocks)}")
 
 data = []
 
-for sym in stocks:
-    ticker = yf.Ticker(sym)
-    hist = ticker.history(period="1y")
+# -----------------------------
+# SAFETY BATCHING
+# -----------------------------
+BATCH_SIZE = 25
 
-    if hist is None or hist.empty:
-        st.warning(f"No data for {sym}")
-        continue
+for i in range(0, len(stocks), BATCH_SIZE):
+    batch = stocks[i:i+BATCH_SIZE]
 
-    close = hist["Close"].iloc[-1]
+    for sym in batch:
+        try:
+            ticker = yf.Ticker(sym)
+            hist = ticker.history(period="1y")
 
-    ma = hist["Close"].rolling(150).mean().iloc[-1]
+            if hist.empty:
+                continue
 
-    high52 = hist["Close"].max()
+            close = hist["Close"].iloc[-1]
 
-    volume = hist["Volume"].iloc[-1]
-    avg_vol = hist["Volume"].rolling(20).mean().iloc[-1]
+            ma150 = hist["Close"].rolling(150).mean().iloc[-1]
 
-    rs = close / hist["Close"].iloc[0]
+            high52 = hist["Close"].max()
 
-    if close > ma and rs > 1.2 and volume > avg_vol:
-        stage = "Stage 2 Trend"
-    elif close >= high52 * 0.95:
-        stage = "Stage 2 Breakout"
-    elif close < ma:
-        stage = "Stage 3/4 Downtrend"
-    else:
-        stage = "Stage 1 Base"
+            volume = hist["Volume"].iloc[-1]
+            avg_vol = hist["Volume"].rolling(20).mean().iloc[-1]
 
-    data.append([sym, close, ma, high52, volume, rs, stage])
+            rs = close / hist["Close"].iloc[0]
 
+            # -----------------------------
+            # WEINSTEIN STAGE LOGIC
+            # -----------------------------
+            if close > ma150 and rs > 1.2 and volume > avg_vol:
+                stage = "Stage 2 Trend"
+            elif close >= high52 * 0.95:
+                stage = "Stage 2 Breakout"
+            elif close < ma150:
+                stage = "Stage 3/4 Downtrend"
+            else:
+                stage = "Stage 1 Base"
+
+            data.append([sym, close, ma150, high52, volume, rs, stage])
+
+        except:
+            continue
+
+# -----------------------------
+# DATAFRAME
+# -----------------------------
 df = pd.DataFrame(data, columns=[
     "Stock", "Close", "MA150", "52W High",
     "Volume", "RS Proxy", "Stage"
 ])
 
-st.subheader("📌 Full Results")
+st.subheader("📌 Full Scan Results")
 st.dataframe(df, use_container_width=True)
 
+# -----------------------------
+# FILTERED SCREENS
+# -----------------------------
 st.subheader("🟢 Stage 2 Breakouts")
 st.dataframe(df[df["Stage"] == "Stage 2 Breakout"])
 
 st.subheader("🟡 Stage 2 Trends")
 st.dataframe(df[df["Stage"] == "Stage 2 Trend"])
 
-st.subheader("🟠 Stage 1 Base")
+st.subheader("🟠 Stage 1 Bases")
 st.dataframe(df[df["Stage"] == "Stage 1 Base"])
 
 st.subheader("🔴 Weak Stocks")
