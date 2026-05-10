@@ -7,7 +7,7 @@ st.set_page_config(page_title="Weinstein Dashboard", layout="wide")
 st.title("📊 Weinstein Stage Dashboard (Stable Version)")
 
 import pandas as pd
-
+[
 stocks = pd.read_csv("nse_750.csv", header=None)[0].tolist()
 ]
 
